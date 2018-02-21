@@ -315,23 +315,6 @@ function legalPassword(passIn) {
 }
 
 
-function authenticate(socket) {
-
-    if (!process.env.YGOPROLOGINENABLED) {
-        return;
-    }
-
-    if (registry[socket.username] !== socket.remoteAddress && socket.remoteAddress !== '::ffff:127.0.0.1') {
-        try {
-            console.log('Terminating:', socket.username, socket.remoteAddress);
-            socket.end();
-        } catch (killerror) {
-            console.log('    [AccessDenied]', 'Something wierd happened with auth', killerror);
-        }
-    } else {
-        console.log('    [Authenticated]', socket.username, registry[socket.username], socket.remoteAddress);
-    }
-}
 
 /**Unlike DevPro, Salvation does not preload its 
 YGOCores. It calls them on demand. This posses a 
@@ -341,7 +324,7 @@ things. 1.) The configuration file, 2.) a port
 number to use and 3.) if it is a valid duel to use
 server resources on. */
 function startCore(port, socket, data, callback) {
-    authenticate(socket);
+
 
     var configfile = pickCoreConfig(socket),
         params = port + ' ' + configfile,
@@ -421,7 +404,7 @@ based on connection speeds.
 ..and VOLIA! Game Request Routing */
 function processIncomingTrasmission(data, socket, task) {
     processTask(task, socket);
-    authenticate(socket);
+
     if (!socket.active_ygocore && socket.hostString) {
         if (gamelist[socket.hostString]) {
             socket.alpha = false;
@@ -442,43 +425,4 @@ function processIncomingTrasmission(data, socket, task) {
     return data;
 }
 
-
-function gamelistUpdate(message) {
-    if (message.gamelist) {
-        gamelist = message.gamelist;
-    }
-    if (message.registry) {
-        registry = message.registry;
-    }
-    if (message.recoverServer) {
-        client.write({
-
-        });
-    }
-}
-
-function onConnectGamelist() {
-    client.write({
-        action: 'internalServerLogin',
-        password: process.env.OPERPASS,
-        gamelist: gamelist,
-        registry: registry
-    });
-    console.log('        [Slave ' + process.env.PORTRANGE + '] ' + 'Connected'.grey);
-}
-
-function onCloseGamelist() {
-
-}
-setTimeout(function() {
-    client = new Socket('ws://127.0.0.1:24555'); //Connect the God to the tree;
-
-    client.on('data', gamelistUpdate);
-    client.on('open', onConnectGamelist);
-    client.on('close', onCloseGamelist);
-
-}, 5000);
-
-
 module.exports = processIncomingTrasmission;
-fs.watch(__filename, process.exit);
